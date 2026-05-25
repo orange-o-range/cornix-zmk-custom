@@ -2,9 +2,12 @@
  * Copyright (c) 2026 numachang
  * SPDX-License-Identifier: MIT
  *
- * Stage B3 (central / left half):
- *   pixel[1] (outer): BT profile colour (BT0=green / BT1=red / BT2=blue)
- *                     on every active profile change.
+ * Stage B5 (central / left half):
+ *   pixel[1] (outer): BT profile colour (BT0=green / BT1=red / BT2=blue).
+ *                     - On profile-connected: 600 ms steady, then off.
+ *                     - On profile-open (advertising / searching): slow
+ *                       blink in the profile colour at 1 Hz / duty 40%
+ *                       for up to 10 cycles or until the host connects.
  *   pixel[0] (inner): blue 3 s steady on peripheral link-up; while
  *                     peripheral is lost, blue blink at 1 Hz / duty 40%
  *                     for up to 10 cycles or until the link returns;
@@ -54,20 +57,96 @@ static struct led_rgb bt_profile_color(uint8_t profile_index) {
     }
 }
 
+/* BT-host "searching" slow blink (B5): mirror of the peer-lost blink but
+ * on pixel[1] in the active profile's colour, while the host profile is
+ * advertising (open) rather than connected. */
+#define BT_SEARCH_BLINK_ON_MS     400
+#define BT_SEARCH_BLINK_PERIOD_MS 1000
+#define BT_SEARCH_BLINK_MAX_COUNT 10
+
+static struct k_work_delayable bt_search_blink_work;
+static int bt_search_blink_remaining;
+static uint8_t bt_search_profile_index;
+
+static void bt_search_blink_handler(struct k_work *work) {
+    ARG_UNUSED(work);
+    if (bt_search_blink_remaining <= 0) {
+        return;
+    }
+    cornix_rgb_blink(CORNIX_RGB_PIX_OUTER,
+                     bt_profile_color(bt_search_profile_index), 1,
+                     BT_SEARCH_BLINK_ON_MS, 0);
+    bt_search_blink_remaining--;
+    if (bt_search_blink_remaining > 0) {
+        k_work_reschedule(&bt_search_blink_work,
+                          K_MSEC(BT_SEARCH_BLINK_PERIOD_MS));
+    } else {
+        LOG_INF("central: BT search blink timed out");
+    }
+}
+
+static void stop_bt_search_blink(void) {
+    bt_search_blink_remaining = 0;
+    k_work_cancel_delayable(&bt_search_blink_work);
+}
+
+static void start_bt_search_blink(uint8_t profile_index) {
+    bt_search_profile_index = profile_index;
+    bt_search_blink_remaining = BT_SEARCH_BLINK_MAX_COUNT;
+    k_work_reschedule(&bt_search_blink_work, K_NO_WAIT);
+}
+
 static int on_bt_profile_changed(const zmk_event_t *eh) {
     ARG_UNUSED(eh);
     int profile = zmk_ble_active_profile_index();
     if (profile < 0) {
         return 0;
     }
-    LOG_INF("central: BT profile -> %d", profile);
-    cornix_rgb_show_once(CORNIX_RGB_PIX_OUTER,
-                         bt_profile_color((uint8_t)profile), 600);
+    bool open = zmk_ble_active_profile_is_open();
+    bool connected = zmk_ble_active_profile_is_connected();
+    LOG_INF("central: BT profile -> %d (open=%d, connected=%d)",
+            profile, open, connected);
+
+    if (connected) {
+        /* Host link is up: cancel any in-flight search blink and emit
+         * the steady "connected" pulse in the profile colour. */
+        stop_bt_search_blink();
+        cornix_rgb_show_once(CORNIX_RGB_PIX_OUTER,
+                             bt_profile_color((uint8_t)profile), 600);
+    } else if (open) {
+        /* Profile is advertising but no host has connected yet: start
+         * the slow searching blink in the profile colour. */
+        start_bt_search_blink((uint8_t)profile);
+    } else {
+        /* Profile is neither open nor connected (e.g. just switched to
+         * an unpaired profile that has not started advertising yet).
+         * Flash the colour once so the user still sees which profile
+         * is active. */
+        stop_bt_search_blink();
+        cornix_rgb_show_once(CORNIX_RGB_PIX_OUTER,
+                             bt_profile_color((uint8_t)profile), 600);
+    }
     return 0;
 }
 
 ZMK_LISTENER(cornix_rgb_central_bt, on_bt_profile_changed);
 ZMK_SUBSCRIPTION(cornix_rgb_central_bt, zmk_ble_active_profile_changed);
+
+static int bt_search_blink_init(void) {
+    k_work_init_delayable(&bt_search_blink_work, bt_search_blink_handler);
+
+    /* Arm the search blink at boot if BT is not yet connected (mirrors
+     * the peer_blink_init boot-arm pattern). on_bt_profile_changed will
+     * cancel it if the host link comes up first. */
+    int profile = zmk_ble_active_profile_index();
+    if (profile >= 0 && !zmk_ble_active_profile_is_connected()) {
+        bt_search_profile_index = (uint8_t)profile;
+        bt_search_blink_remaining = BT_SEARCH_BLINK_MAX_COUNT;
+        k_work_reschedule(&bt_search_blink_work, K_MSEC(500));
+    }
+    return 0;
+}
+SYS_INIT(bt_search_blink_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 static bool is_peripheral_link(struct bt_conn *conn) {
     struct bt_conn_info info;
