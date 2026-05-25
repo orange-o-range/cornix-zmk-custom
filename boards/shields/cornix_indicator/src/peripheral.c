@@ -38,7 +38,7 @@ static int on_central_status(const zmk_event_t *eh) {
     LOG_INF("peripheral: central %s",
             ev->connected ? "connected" : "disconnected");
     if (ev->connected) {
-        cornix_rgb_show_once(CORNIX_RGB_PIX_OUTER, COL_BLUE, 600);
+        cornix_rgb_show_once(CORNIX_RGB_PIX_OUTER, COL_BLUE, 3000);
     } else {
         cornix_rgb_blink(CORNIX_RGB_PIX_OUTER, COL_BLUE, 2, 400, 400);
     }

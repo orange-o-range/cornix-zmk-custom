@@ -2,14 +2,20 @@
  * Copyright (c) 2026 numachang
  * SPDX-License-Identifier: MIT
  *
- * Stage B2 (central / left half):
+ * Stage B2.1 (central / left half):
  *   pixel[1] (outer): BT profile colour (BT0=green / BT1=red / BT2=blue)
  *                     on every active profile change.
- *   pixel[0] (inner): blue burst when the split peripheral connects /
- *                     disconnects, plus a red blink on self battery low.
+ *   pixel[0] (inner): blue 3 s steady on peripheral link-up, blue 2x
+ *                     blink on link-down, red 2x blink on self battery low.
  *
- * Continuous "searching" or "peer-lost" blinking comes in B3.
- * Charging colours come in B4 once the STAT GPIO is identified.
+ * Note on peer detection: zmk_split_peripheral_status_changed is only
+ * raised on the peripheral side. On central we have to register our
+ * own bt_conn_cb (matching what ZMK's own split/bluetooth/central.c
+ * does) and filter to info.role == BT_CONN_ROLE_CENTRAL so we ignore
+ * host (BT0/1/2) connections, which are handled by the BT profile
+ * listener above.
+ *
+ * Continuous "peer-lost" blinking with a timeout comes in B3.
  */
 
 #include <zephyr/kernel.h>
@@ -17,17 +23,19 @@
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 
+#include <zephyr/bluetooth/conn.h>
+
 #include <zmk/ble.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/ble_active_profile_changed.h>
 #include <zmk/events/battery_state_changed.h>
-#include <zmk/events/split_peripheral_status_changed.h>
 
 #include <cornix_rgb_indicator/widget.h>
 
 LOG_MODULE_DECLARE(cornix_rgb, CONFIG_ZMK_LOG_LEVEL);
 
 #define BATTERY_LEVEL_LOW 20
+#define PEER_ON_MS        3000
 
 static const struct led_rgb COL_RED   = {.r = CORNIX_RGB_LEVEL};
 static const struct led_rgb COL_GREEN = {.g = CORNIX_RGB_LEVEL};
@@ -61,24 +69,36 @@ static int on_bt_profile_changed(const zmk_event_t *eh) {
 ZMK_LISTENER(cornix_rgb_central_bt, on_bt_profile_changed);
 ZMK_SUBSCRIPTION(cornix_rgb_central_bt, zmk_ble_active_profile_changed);
 
-static int on_peripheral_status(const zmk_event_t *eh) {
-    const struct zmk_split_peripheral_status_changed *ev =
-        as_zmk_split_peripheral_status_changed(eh);
-    if (ev == NULL) {
-        return 0;
+static bool is_peripheral_link(struct bt_conn *conn) {
+    struct bt_conn_info info;
+    if (bt_conn_get_info(conn, &info) != 0) {
+        return false;
     }
-    LOG_INF("central: peripheral %s",
-            ev->connected ? "connected" : "disconnected");
-    if (ev->connected) {
-        cornix_rgb_show_once(CORNIX_RGB_PIX_INNER, COL_BLUE, 600);
-    } else {
-        cornix_rgb_blink(CORNIX_RGB_PIX_INNER, COL_BLUE, 2, 400, 400);
-    }
-    return 0;
+    /* We are central of the link; the other side is our peripheral half. */
+    return info.role == BT_CONN_ROLE_CENTRAL;
 }
 
-ZMK_LISTENER(cornix_rgb_central_peer, on_peripheral_status);
-ZMK_SUBSCRIPTION(cornix_rgb_central_peer, zmk_split_peripheral_status_changed);
+static void on_peer_connected(struct bt_conn *conn, uint8_t err) {
+    if (err || !is_peripheral_link(conn)) {
+        return;
+    }
+    LOG_INF("central: peripheral linked");
+    cornix_rgb_show_once(CORNIX_RGB_PIX_INNER, COL_BLUE, PEER_ON_MS);
+}
+
+static void on_peer_disconnected(struct bt_conn *conn, uint8_t reason) {
+    ARG_UNUSED(reason);
+    if (!is_peripheral_link(conn)) {
+        return;
+    }
+    LOG_INF("central: peripheral lost");
+    cornix_rgb_blink(CORNIX_RGB_PIX_INNER, COL_BLUE, 2, 400, 400);
+}
+
+BT_CONN_CB_DEFINE(cornix_rgb_central_conn_cb) = {
+    .connected = on_peer_connected,
+    .disconnected = on_peer_disconnected,
+};
 
 static int on_battery_changed(const zmk_event_t *eh) {
     const struct zmk_battery_state_changed *ev = as_zmk_battery_state_changed(eh);
