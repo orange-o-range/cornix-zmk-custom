@@ -38,8 +38,13 @@
 LOG_MODULE_DECLARE(cornix_rgb, CONFIG_ZMK_LOG_LEVEL);
 
 #define CHARGING_FULL_THRESHOLD  95
+/* Charging blink is intentionally slower / lower duty than the B3 / B5
+ * blue and BT-search blinks. Green is at the peak of human eye
+ * sensitivity and felt "flickery" at the same 1 Hz / duty 40% cadence
+ * the other indicators use. 0.5 Hz / duty 20% reads as a calm "charging"
+ * sign without distracting. See discussion on #2. */
 #define CHARGING_BLINK_ON_MS     400
-#define CHARGING_BLINK_PERIOD_MS 1000
+#define CHARGING_BLINK_PERIOD_MS 2000
 #define FULL_SHOW_MS             3000
 
 static const struct led_rgb COL_GREEN = {.g = CORNIX_RGB_LEVEL};
