@@ -18,9 +18,13 @@
  * (B3 peer-lost = 1 s, B4 charging = 2 s, B5 BT search = 1 s) so that
  * those workers' own self-rescheduling keeps the LED powered for the
  * duration of the indication. 15 s leaves comfortable headroom.
+ *
+ * EXT_POWER rail assumption: this fork's Cornix wiring puts the WS2812
+ * strip alone on the zmk,ext-power-generic rail (P0.13 left / P0.24
+ * right). If a future shield adds another consumer (e.g. nice!view) to
+ * the same rail it would also be cut at idle — bring it up on its own
+ * rail or wrap it in a separate gating mechanism.
  */
-
-#include <string.h>
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/led_strip.h>
@@ -177,3 +181,13 @@ static void cornix_rgb_thread_fn(void *p1, void *p2, void *p3) {
 K_THREAD_DEFINE(cornix_rgb_tid, 1024, cornix_rgb_thread_fn,
                 NULL, NULL, NULL,
                 K_LOWEST_APPLICATION_THREAD_PRIO, 0, 200);
+
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT)
+/* central.c / peripheral.c both guard themselves on CONFIG_ZMK_SPLIT.
+ * Provide a no-op fallback so charging.c (which calls this
+ * unconditionally) still links on a non-split build. Cornix always
+ * builds as split, but keeping the symmetry costs nothing. */
+bool cornix_rgb_peer_blink_active(void) {
+    return false;
+}
+#endif

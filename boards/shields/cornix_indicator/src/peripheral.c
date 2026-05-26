@@ -13,6 +13,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/atomic.h>
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT) && !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 
@@ -32,20 +33,25 @@ static const struct led_rgb COL_BLUE = {.b = CORNIX_RGB_LEVEL};
 #define CENTRAL_ON_MS 3000
 
 static struct k_work_delayable peer_blink_work;
-static int peer_blink_remaining;
+/* Touched from the system workqueue (handler), the event manager
+ * (on_central_status), and the strip worker (via
+ * cornix_rgb_peer_blink_active). Atomic so races between cancel/arm
+ * and a mid-tick handler do not leak "still active" past timeout. */
+static atomic_t peer_blink_remaining;
 
 static void peer_blink_handler(struct k_work *work) {
     ARG_UNUSED(work);
-    if (peer_blink_remaining <= 0) {
+    if (atomic_get(&peer_blink_remaining) <= 0) {
         return;
     }
     cornix_rgb_blink(CORNIX_RGB_PIX_OUTER, COL_BLUE, 1,
                      CORNIX_PEER_BLINK_ON_MS, 0);
-    peer_blink_remaining--;
-    if (peer_blink_remaining > 0) {
+    atomic_val_t before = atomic_dec(&peer_blink_remaining);
+    if (before > 1) {
         k_work_reschedule(&peer_blink_work,
                           K_MSEC(CORNIX_PEER_BLINK_PERIOD_MS));
     } else {
+        atomic_set(&peer_blink_remaining, 0);
         LOG_INF("peripheral: central-lost blink timed out");
     }
 }
@@ -65,11 +71,11 @@ static int on_central_status(const zmk_event_t *eh) {
     LOG_INF("peripheral: central %s",
             ev->connected ? "connected" : "disconnected");
     if (ev->connected) {
-        peer_blink_remaining = 0;
+        atomic_set(&peer_blink_remaining, 0);
         k_work_cancel_delayable(&peer_blink_work);
         cornix_rgb_show_once(CORNIX_RGB_PIX_OUTER, COL_BLUE, CENTRAL_ON_MS);
     } else {
-        peer_blink_remaining = CORNIX_PEER_BLINK_MAX_COUNT;
+        atomic_set(&peer_blink_remaining, CORNIX_PEER_BLINK_MAX_COUNT);
         k_work_reschedule(&peer_blink_work, K_NO_WAIT);
     }
     return 0;
@@ -79,7 +85,7 @@ ZMK_LISTENER(cornix_rgb_periph_peer, on_central_status);
 ZMK_SUBSCRIPTION(cornix_rgb_periph_peer, zmk_split_peripheral_status_changed);
 
 bool cornix_rgb_peer_blink_active(void) {
-    return peer_blink_remaining > 0;
+    return atomic_get(&peer_blink_remaining) > 0;
 }
 
 static int on_battery_changed(const zmk_event_t *eh) {

@@ -123,9 +123,21 @@ static int on_battery_for_charging(const zmk_event_t *eh) {
     }
     latest_battery = ev->state_of_charge;
 
-    /* If we are charging and crossed the full threshold since the last
-     * cycle, let the next charging_blink_handler fire emit the steady
-     * pulse — no special-casing needed here. */
+    /* Crossing the full threshold upward: nothing to do — the next
+     * scheduled charging_blink_handler fires the steady "full" pulse.
+     *
+     * Crossing the threshold downward while we are still on USB power
+     * AND have already shown "full" once: revert to charging mode so
+     * the indicator follows reality (e.g. heavy load drew the cell
+     * back below 95% even though USB is still attached). Without this,
+     * the green pulse would only resume after a physical unplug. */
+    if (usb_powered && full_already_shown &&
+        ev->state_of_charge < CHARGING_FULL_THRESHOLD) {
+        LOG_INF("charging: fell back below %u%% (now %u%%), resume blink",
+                CHARGING_FULL_THRESHOLD, ev->state_of_charge);
+        full_already_shown = false;
+        k_work_reschedule(&charging_blink_work, K_NO_WAIT);
+    }
     return 0;
 }
 

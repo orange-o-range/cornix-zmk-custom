@@ -23,6 +23,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/atomic.h>
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 
@@ -65,34 +66,40 @@ static struct led_rgb bt_profile_color(uint8_t profile_index) {
 #define BT_SEARCH_BLINK_MAX_COUNT 10
 
 static struct k_work_delayable bt_search_blink_work;
-static int bt_search_blink_remaining;
+/* Touched from the BT RX thread (host events), the system workqueue
+ * (handler), and the strip worker (via cornix_rgb_peer_blink_active).
+ * Atomic keeps races from misreading "armed" vs "idle" state. */
+static atomic_t bt_search_blink_remaining;
 static uint8_t bt_search_profile_index;
 
 static void bt_search_blink_handler(struct k_work *work) {
     ARG_UNUSED(work);
-    if (bt_search_blink_remaining <= 0) {
+    if (atomic_get(&bt_search_blink_remaining) <= 0) {
         return;
     }
     cornix_rgb_blink(CORNIX_RGB_PIX_OUTER,
                      bt_profile_color(bt_search_profile_index), 1,
                      BT_SEARCH_BLINK_ON_MS, 0);
-    bt_search_blink_remaining--;
-    if (bt_search_blink_remaining > 0) {
+    /* atomic_dec returns the value before decrement. */
+    atomic_val_t before = atomic_dec(&bt_search_blink_remaining);
+    if (before > 1) {
         k_work_reschedule(&bt_search_blink_work,
                           K_MSEC(BT_SEARCH_BLINK_PERIOD_MS));
     } else {
+        /* Clamp to 0 in case a concurrent dec pushed us below. */
+        atomic_set(&bt_search_blink_remaining, 0);
         LOG_INF("central: BT search blink timed out");
     }
 }
 
 static void stop_bt_search_blink(void) {
-    bt_search_blink_remaining = 0;
+    atomic_set(&bt_search_blink_remaining, 0);
     k_work_cancel_delayable(&bt_search_blink_work);
 }
 
 static void start_bt_search_blink(uint8_t profile_index) {
     bt_search_profile_index = profile_index;
-    bt_search_blink_remaining = BT_SEARCH_BLINK_MAX_COUNT;
+    atomic_set(&bt_search_blink_remaining, BT_SEARCH_BLINK_MAX_COUNT);
     k_work_reschedule(&bt_search_blink_work, K_NO_WAIT);
 }
 
@@ -141,7 +148,7 @@ static int bt_search_blink_init(void) {
     int profile = zmk_ble_active_profile_index();
     if (profile >= 0 && !zmk_ble_active_profile_is_connected()) {
         bt_search_profile_index = (uint8_t)profile;
-        bt_search_blink_remaining = BT_SEARCH_BLINK_MAX_COUNT;
+        atomic_set(&bt_search_blink_remaining, BT_SEARCH_BLINK_MAX_COUNT);
         k_work_reschedule(&bt_search_blink_work, K_MSEC(500));
     }
     return 0;
@@ -158,20 +165,21 @@ static bool is_peripheral_link(struct bt_conn *conn) {
 }
 
 static struct k_work_delayable peer_blink_work;
-static int peer_blink_remaining;
+static atomic_t peer_blink_remaining;
 
 static void peer_blink_handler(struct k_work *work) {
     ARG_UNUSED(work);
-    if (peer_blink_remaining <= 0) {
+    if (atomic_get(&peer_blink_remaining) <= 0) {
         return;
     }
     cornix_rgb_blink(CORNIX_RGB_PIX_INNER, COL_BLUE, 1,
                      CORNIX_PEER_BLINK_ON_MS, 0);
-    peer_blink_remaining--;
-    if (peer_blink_remaining > 0) {
+    atomic_val_t before = atomic_dec(&peer_blink_remaining);
+    if (before > 1) {
         k_work_reschedule(&peer_blink_work,
                           K_MSEC(CORNIX_PEER_BLINK_PERIOD_MS));
     } else {
+        atomic_set(&peer_blink_remaining, 0);
         LOG_INF("central: peer-lost blink timed out");
     }
 }
@@ -186,7 +194,7 @@ static int peer_blink_init(void) {
      * only called for an established-then-lost link, so booting with
      * the peer absent would otherwise look silent. Arm the blink at
      * boot; on_peer_connected cancels it if the link comes up first. */
-    peer_blink_remaining = CORNIX_PEER_BLINK_MAX_COUNT;
+    atomic_set(&peer_blink_remaining, CORNIX_PEER_BLINK_MAX_COUNT);
     k_work_reschedule(&peer_blink_work, K_MSEC(500));
 
     return 0;
@@ -198,7 +206,7 @@ static void on_peer_connected(struct bt_conn *conn, uint8_t err) {
         return;
     }
     LOG_INF("central: peripheral linked");
-    peer_blink_remaining = 0;
+    atomic_set(&peer_blink_remaining, 0);
     k_work_cancel_delayable(&peer_blink_work);
     cornix_rgb_show_once(CORNIX_RGB_PIX_INNER, COL_BLUE, PEER_ON_MS);
 }
@@ -209,7 +217,7 @@ static void on_peer_disconnected(struct bt_conn *conn, uint8_t reason) {
         return;
     }
     LOG_INF("central: peripheral lost, starting blink");
-    peer_blink_remaining = CORNIX_PEER_BLINK_MAX_COUNT;
+    atomic_set(&peer_blink_remaining, CORNIX_PEER_BLINK_MAX_COUNT);
     k_work_reschedule(&peer_blink_work, K_NO_WAIT);
 }
 
@@ -219,7 +227,7 @@ BT_CONN_CB_DEFINE(cornix_rgb_central_conn_cb) = {
 };
 
 bool cornix_rgb_peer_blink_active(void) {
-    return peer_blink_remaining > 0;
+    return atomic_get(&peer_blink_remaining) > 0;
 }
 
 static int on_battery_changed(const zmk_event_t *eh) {
