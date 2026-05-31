@@ -16,4 +16,9 @@
     };
 };
 
+/* Watchdog for issue #14 auto-recovery (driven by src/wdt_recovery.c). */
+&wdt0 {
+    status = "okay";
+};
+
 //vim: set ft=dts:
