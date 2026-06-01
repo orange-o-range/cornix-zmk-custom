@@ -7,6 +7,6 @@ target_sources(app PRIVATE
     src/central.c
     src/peripheral.c
     src/charging.c
-    src/wdt_recovery.c
+    src/bt_ctlr_assert.c
 )
 zephyr_include_directories(include)
