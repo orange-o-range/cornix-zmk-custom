@@ -2,7 +2,7 @@
 
 > Source: https://docs.channel.io/jezailfunderjp/ja/articles/Cornix-%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB-c1160246
 > Retrieved: 2026-05-24
-> Note: 出典は鍵造坊（JezailFunder）公式マニュアル。記述は出荷時 RMK ファームウェア（Vial 前提）に基づく。本フォーク（zmk-keyboard-cornix-jp）は ZMK 化のため、Vial 関連手順・「Switch Output」「Clear Peer」等のキーマップ操作はそのまま当てはまらない。ハードウェア仕様・充電・LED・ペアリング動作の参照用として残す。
+> Note: 出典は鍵造坊（JezailFunder）公式マニュアル。記述は出荷時 RMK ファームウェア（Vial 前提）に基づく。本フォーク（cornix-zmk-custom）は ZMK 化のため、Vial 関連手順・「Switch Output」「Clear Peer」等のキーマップ操作はそのまま当てはまらない。ハードウェア仕様・充電・LED・ペアリング動作の参照用として残す。
 
 ## Cornixワイヤレス分割型キーボード
 

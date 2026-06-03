@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## CRITICAL: This is a downstream fork — never touch upstream
 
-- `origin` is `numachang/zmk-keyboard-cornix-jp` (a personal fork).
+- `origin` is `numachang/cornix-zmk-custom` (a personal fork).
 - Upstream is `hitsmaxft/zmk-keyboard-cornix`. **No PRs, pushes, branches, or issues against upstream.** Do not add an `upstream` remote and push to it, do not `gh pr create` targeting `hitsmaxft/*`, do not suggest contributing changes back unless the user explicitly asks.
 - All work stays on this fork. When in doubt, confirm the remote before any `git push`, `gh pr create`, or `gh issue` command.
-- The `-jp` suffix marks Japan-specific divergence from upstream — see "Japan-specific customizations" below.
+- This fork carries Japan-specific divergence from upstream — see "Japan-specific customizations" below. (The repo was formerly named `zmk-keyboard-cornix-jp`; GitHub redirects the old URL.)
 
 ## What this repo is
 

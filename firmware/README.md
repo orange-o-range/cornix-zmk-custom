@@ -32,8 +32,8 @@
 
 | ディレクトリ | 内容 |
 |---|---|
-| `main-41a468d` | main、Actions の push trigger 修正 ([41a468d](https://github.com/numachang/zmk-keyboard-cornix-jp/commit/41a468d)) 後の最初の動作確認用 |
-| `main-abe5248` | main、非 Base レイヤの BT_SEL/BT_CLR キー配置確定 ([abe5248](https://github.com/numachang/zmk-keyboard-cornix-jp/commit/abe5248)) 後 |
+| `main-41a468d` | main、Actions の push trigger 修正 ([41a468d](https://github.com/numachang/cornix-zmk-custom/commit/41a468d)) 後の最初の動作確認用 |
+| `main-abe5248` | main、非 Base レイヤの BT_SEL/BT_CLR キー配置確定 ([abe5248](https://github.com/numachang/cornix-zmk-custom/commit/abe5248)) 後 |
 | `diag-issue-11` | 右側スリープから復帰しない問題 (#11) の原因切り分け用ビルド + シリアルログ (`cornix-sleep-resume.log`) |
 | `feat-rgb-indicator-stage1-406c99e` | RGB indicator 開発 (#2) の stage B1 — 起動時に LED0=暗赤・LED1=暗緑を 200 ms 点灯するだけの最小実装 |
 
