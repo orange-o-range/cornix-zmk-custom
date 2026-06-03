@@ -1,175 +1,162 @@
-# ZMK Keyboard Cornix
+# Cornix 的 ZMK 固件（日本定制版）
 
-## 开发板和扩展板介绍
+**语言:** [English](./README.md) | [日本語](./README_ja.md) | 中文
 
-本仓库包含用于 Cornix 分体式键盘的 ZMK 固件配置。以下是该项目中可用的不同开发板和扩展板的说明：
+本仓库（`numachang/cornix-zmk-custom`）是
+[`hitsmaxft/zmk-keyboard-cornix`](https://github.com/hitsmaxft/zmk-keyboard-cornix) 的**面向日本的下游分支**，
+包含 Cornix 分体式键盘的 ZMK 固件配置以及开发板/扩展板模块。
 
-### 开发板
+由于在日本 Cornix 是作为**普通的蓝牙分体式键盘**（无适配器/dongle）销售和使用的，本分支有意在以下几个方面与上游不同：
 
-该项目包含三个主要的开发板定义：
+- **禁用了适配器（dongle）构建目标。** 键盘以标准分体方式运行，左半部分作为中心（central）。适配器相关扩展板仍保留在
+  磁盘上，但不包含在有效的构建矩阵中。
+- **在 `cornix_left` 上启用了 ZMK Studio**，可通过 USB 使用
+  [ZMK Studio](https://zmk.dev/docs/features/studio) 实时编辑键位图。
+- **将 RGB 指示灯（`cornix_indicator`）** 内置到有效的构建目标中。
 
-- **`cornix_left`**: Cornix 分体式键盘的左半部分，用于在不使用适配器配置的情况下构建固件。
-- **`cornix_right`**: Cornix 分体式键盘的右半部分，用于分体式键盘设置中的从设备侧。
-- **`cornix_ph_left`**: 左半部分的替代开发板配置，专门设计用于适配器设置。
+> ### 在找 RMK 固件吗？
+> Cornix 的原厂固件是 **RMK**。对应的 RMK 定制版本在此维护：
+> **https://github.com/numachang/cornix-rmk-custom**
+>
+> 想继续使用 RMK 就用那个仓库；想使用 ZMK 就用*本仓库*。
 
-### 扩展板
-
-该项目包含几个提供额外功能的专用扩展板：
-
-- **`cornix_dongle_adapter`**: 为适配器配置提供矩阵和蓝牙功能的通用功能。在使用带有自定义适配器的 Cornix 时需要此扩展板。
-- **`cornix_dongle_eyelash`**: 用于为适配器板设置显示设备的示例扩展板。当板子本身没有在设备树中包含 `zephyr,display` 时使用此扩展板。
-- **`cornix_indicator`**: 启用 RGB LED 指示灯以显示电池状态和连接状态的扩展板。注意使用此扩展板会消耗更多电量。
-
----
-
-这个社区固件已在使用 ZMK 的 Cornix 上进行了测试，并提供完整的分体角色配置、电池电源管理和蓝牙主/从设置，符合 ZMK 分体式指南
+> ### 编辑键位图：ZMK Studio Tweaks（定制 Web 编辑器）
+> ZMK Studio 的改版部署在 **https://zmk-studio-tweaks.numachang.com/**
+>（源码：**https://github.com/numachang/zmk-studio-tweaks**）。它通过 Web Serial API 完全在 Chromium 浏览器中运行
+>（数据不会离开你的电脑），可直接打开 `cornix_left` 并在其中编辑键位图。
+>
+> 它是官方 ZMK Studio 的一个分支，在上游编辑器的基础上增加了：
+> - **键位图导入/导出**（JSON 文件），并提供来自固件的错误反馈。
+> - **可视化按键选择器** — 带搜索的网格式 HID 选择器、分类的 behavior，以及可点击的物理配列渲染
+>   （ANSI/ISO/**JIS**）。
+> - **主机配列本地化** — 支持包括**日语**在内的 22 种 OS 配列。在不改变底层 HID 绑定的前提下，
+>   选择器和标签会随你的键盘配列自适应显示。
+>
+> 这里用于在不受上游评审周期阻塞的情况下原型化功能，意图是把能干净落地的功能以 PR 形式回馈上游。
+> 它**与 ZMK 项目无关，也未获其认可**。如需稳定且受支持的使用，请优先选择[官方 ZMK Studio](https://zmk.studio/)。
 
 ![image](images/cornix_with_dongle.png)
 ![image](images/cornix_layout.png)
 
-## 警告：设备损坏恢复
+## 开发板和扩展板
 
-原始 Cornix 使用没有 SoftDevice 的闪存布局
-因此在项目中，所有开发板默认使用无 SD 布局
+### 开发板
 
-如果你将固件刷入适配器并发现它无法与原始固件配合工作
-你有两种解决方案
+- **`cornix_left`**: Cornix 分体式键盘的左半部分。作为中心（主）侧。此处启用了 ZMK Studio。
+- **`cornix_right`**: Cornix 分体式键盘的右半部分。作为外围（从）侧。
+- **`cornix_ph_left`**: 用于适配器配置的备用左半部分开发板。**本分支未使用**（为与上游保持一致而保留）。
 
-1. （推荐）在 bootloader 目录下刷入 sd 恢复 uf2 文件（适用于 nice nano 2，但我认为它适用于大多数 nrf52840 设备）其他开发板 https://github.com/hitsmaxft/Adafruit_nRF52_Bootloader/actions/runs/18398554358
-2. 使用代码片段 'nrf52840-nosd' 构建你的固件，使 zmk 忽略软设备
+### 扩展板
 
-## TODO 列表
+- **`cornix_indicator`**: 启用 RGB LED 指示灯以显示电池和连接状态。会消耗更多电量。
+- **`cornix_dongle_adapter`** / **`cornix_dongle_eyelash`**: 来自上游的适配器相关扩展板。它们存在于磁盘上，但在本分支中
+  **不被有效的构建矩阵引用**。
 
-- [x] 52 键完整布局键位图，自 v2.0
-- [x] ec11 编码器，自 v2.2
-- [x] 无 SD 镜像，自 v2.3
-- [x] 支持各种适配器
-- [x] 升级到 zephyr4.1 和 lvgl9，自 v2.7，暂不支持适配器屏幕
-- [ ] RGB，将在未来 v3 中支持
-
-### 关于 RGB
-
-Cornix 扩展板每侧有 2 个 RGB LED，由 PWM 在原始固件中控制。
-
-替代解决方案是采用 RGB 指示模块来点亮这些 RGB，以实现与原始固件相同的效果，原始固件使用 RGB LED 来指示电池状态和连接状态。
-
-但此功能尚未在此仓库中支持。欢迎提交 PR！
+这个社区固件已在使用 ZMK 的 Cornix 上进行了测试，并按照 ZMK 分体式指南提供完整的分体角色配置、电池电源管理以及
+蓝牙中心/外围设置。
 
 ## 支持的硬件：Cornix 分体式键盘
 
-Cornix 分体式帐篷式低轮廓人体工学键盘 (Jezail 资助者)
+Cornix Split Tented Low-Profile Ergo Keyboard (Jezail Funder)
 
-Cornix 是一款受 Corne 启发的分体式人体工学键盘，具有紧凑的 3×6 列交错布局和六个拇指集群键（每半边三个）。它提供 10°、18° 和 25° 的可调帐篷角度，允许用户减少手腕压力并找到自定义的人体工学对齐
+Cornix 是一款受 Corne 启发的分体式人体工学键盘，具有紧凑的 3×6 列交错布局和六个拇指集群键（每半边三个）。它提供
+10°、18° 和 25° 的可调帐篷角度，帮助用户减少手腕压力并找到自定义的人体工学对齐。
 
-- **分体式、列交错布局** (3×6 + 拇指集群布局)。
+- **分体式、列交错布局**（3×6 + 拇指集群）。
 - **可调帐篷支撑** 10°、18°、25°（基于硬件，无需固件黑科技）。
-- **Kailh Choc V2 热插拔插座** 并支持 LAK 或 LCK 低轮廓键帽。
-- **双模连接**：有线 USB-C 或蓝牙无线（左半边为主设备）。
-- **固件**：完全支持 VIAL 进行键位图和层自定义，原始固件为 RMK。
+- **Kailh Choc V2 热插拔插座**，支持 LAK 或 LCK 低轮廓键帽。
+- **双模连接**：有线 USB-C 或蓝牙无线（左半边为中心）。
+- **固件**：原厂固件为 RMK（支持 VIAL）；本仓库提供 ZMK 替代方案。
 - 高端 **CNC 加工铝制底盘**、定制减震泡沫和便携存储袋。
 
-> 该项目所有者也是 RMK 贡献者，请支持 RMK https://rmk.rs/
+> 上游项目所有者也是 RMK 贡献者，请支持 RMK https://rmk.rs/
 
-## --Bootloader 恢复说明--
+## Bootloader / 恢复说明
 
--- 原始 RMK 固件移除了 SoftDevice，因此在刷入 `zmk.uf2` 之前，您需要先恢复 SoftDevice。具体步骤请参见 [bootloader/README.md](./bootloader/README.md)。 --
+自开发板 **v2.3** 起，闪存分区布局已更新，SoftDevice 分区被缩小（150K → 4K），因此可以直接刷写 `.uf2` 文件，
+**无需恢复 SoftDevice**。
 
-自 v2.3 此板的闪存分区已更新，移除了 SD（将 SD 分区大小从 150K 减少到 4K），因此您可以直接刷入固件。
-
-> 您可能需要通过早期版本的 reset.uf2 重置固件
-
-> 您可以通过刷入原始 uf2 文件回滚到原始固件，在 rmkfw/ 下备份文件
+- 如果你从非常旧的固件迁移，可能需要先用 `reset.uf2` 重置。
+- 你可以通过刷写原始 `.uf2` 文件回滚到原厂 RMK 固件；备份文件位于 `rmkfw/`。
+- 更深入的 bootloader 恢复说明（旧的 SoftDevice 恢复方式）见
+  [bootloader/README.md](./bootloader/README.md)。
 
 ## 🔰 简单方法：克隆此仓库并使用 GitHub Actions 构建
 
-如果您是 ZMK 新手，不想处理 `west.yml` 或模块管理，您可以直接使用此仓库来自定义固件。
+如果你是 ZMK 新手，不想处理 `west.yml` 或模块管理，可以直接使用此仓库来定制固件。
 
 ### 步骤
 
 1. **Fork 或克隆此仓库**
-   - 点击右上角的 **Fork** 将此仓库复制到您的 GitHub 账户，或
-   - 本地运行 `git clone`。
+   - 点击右上角的 **Fork** 将仓库复制到你的 GitHub 账户，或在本地运行 `git clone`。
 
-   > 推荐 Fork，因为 GitHub Actions 会自动构建您的固件。
+   > 推荐 Fork，因为 GitHub Actions 会自动构建你的固件。
 
-2. **编辑您的键位图**
-   - 在 `config/cornix.keymap` 中找到键位图文件（或您想要自定义的任何 `.keymap` 文件）。
-   - 您可以直接编辑，或使用 [ZMK 键位图编辑器](https://nickcoutsos.github.io/keymap-editor/)：
-     - 打开编辑器并加载您的 `.keymap` 文件。
-     - 使用可视化编辑器进行更改。
-     - 下载更新后的文件并替换仓库中的文件。
-     - 提交并推送到 GitHub。
+2. **编辑你的键位图**
+   - 键位图位于 `config/cornix.keymap`。可直接编辑，或使用 ZMK Studio（在 `cornix_left` 上启用）—
+     [官方编辑器](https://zmk.studio/) 或改版
+     [zmk-studio-tweaks.numachang.com](https://zmk-studio-tweaks.numachang.com/)（见上文）— 或
+     [ZMK 键位图编辑器](https://nickcoutsos.github.io/keymap-editor/)。
+   - 提交并推送到 GitHub。
 
 3. **使用 GitHub Actions 构建**
-   - 推送后，GitHub Actions 将自动运行构建。
-   - 工作流完成后，转到 **Actions → 您的最新运行 → Artifacts** 并下载固件 (`.uf2`) 文件。
+   - 推送 `boards/*` 或 `config/*` 下的更改会自动触发构建。你也可以从 **Actions → “Build ZMK firmware” →
+     Run workflow** 手动启动（仅修改 `build.yaml` 不会自动触发构建，此时请手动运行）。
+   - 工作流完成后，转到 **Actions → 最新运行 → Artifacts** 下载固件（`firmware.zip`，每个目标包含一个 `.uf2`）。
 
-4. **刷入您的键盘**
-   - 将您的板子置于 UF2 引导加载程序模式（通常通过双击复位按钮）。
-   - 将 `.uf2` 文件拖放到挂载的驱动器上。
+4. **刷写键盘**
+   - 将每一半置于 UF2 引导加载程序模式（通常通过双击复位按钮）。
+   - 将对应的 `.uf2` 拖放到挂载的驱动器上。
+   - 使用**支持数据传输的 USB-C 数据线**，并**从同一次构建刷写两半**，以避免分体协议不匹配。
 
 ### 适用于谁？
 
 - ZMK 新手
 - 只想自定义键位图的用户
-- 不需要修改驱动程序或硬件定义的任何人
+- 不需要修改驱动程序或硬件定义的人
 
-## 如何从头开始构建 Cornix ZMK 固件
+## 构建目标（`build.yaml`）
 
-本节将指导您使用官方 ZMK 固件开发流程从头开始构建 Cornix ZMK 固件。
+本分支提供以下有效目标（适配器目标已注释）：
 
-### 先决条件
+```yaml
+include:
+  # 左半部分（中心）— RGB 指示灯 + 通过 USB 的 ZMK Studio
+  - board: cornix_left
+    shield: cornix_indicator
+    snippet: studio-rpc-usb-uart nrf52840-nosd
+    artifact-name: cornix_left_default_nosd
 
-开始之前，请确保您具备以下条件：
-- GitHub 账户
-- 系统上安装了 Git
-- Git 和 GitHub 的基本理解
-- 您的 Cornix 键盘 PCB 已准备就绪
+  # 右半部分（外围）— RGB 指示灯
+  - board: cornix_right
+    shield: cornix_indicator
+    artifact-name: cornix_right_nosd
 
-### 第 1 步：初始化 ZMK 配置仓库
+  # 设置重置（重新配对时刷写到两半）
+  - board: cornix_right
+    shield: settings_reset
+    snippet: studio-rpc-usb-uart nrf52840-nosd
+    artifact-name: cornix_reset
+```
 
-1. **使用官方 ZMK 配置模板创建新仓库**：
-   - 访问：https://github.com/zmkfirmware/unified-zmk-config-template
-   - 点击"使用此模板" → "创建新仓库"
-   - 命名您的仓库（例如 `cornix-zmk-config`）
-   - 选择"公共"或"私有"作为首选
-   - 点击"创建仓库"
+> [!NOTE]
+> - `cornix_indicator` 扩展板启用 RGB LED，但会消耗更多电量。如果不需要指示灯，可从目标中移除它。
+> - 重新配对步骤：向两侧刷写 `cornix_reset`，然后刷写 `cornix_left` 和 `cornix_right`，并同时复位两侧。
 
-2. **在本地克隆您的新仓库**：
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-   cd YOUR_REPO_NAME
-   ```
+## 如何将 Cornix 模块添加到现有 ZMK 项目
 
-3. **初始化 ZMK 开发环境**：
-   ```bash
-   west init -l config/
-   west update
-   west zephyr-export
-   ```
+对于已有 zmk-config 的用户，通过 `west.yml` 将此仓库添加为依赖，并用 `west update` 拉取。
 
-> **重要**：在继续之前，您应该彻底阅读 ZMK 文档，因为 ZMK 固件开发有一个学习曲线。
-> - ZMK 自定义指南：https://zmk.dev/docs/customization
-> - ZMK 配置：https://zmk.dev/docs/user-setup
+### 1. 修改 `west.yml`
 
-### 第 2 步：将 Cornix 扩展板添加到您的项目
-
-初始化您的 zmk-config 仓库后，请按照下一节中的步骤集成 Cornix 扩展板。
-
-## 如何将 Cornix 扩展板添加到现有 ZMK 项目
-
-对于具有现有 zmk-config 的用户，应通过 west.yml 添加此仓库依赖并通过 west update 拉取最新版本：
-
-### 1. 修改 west.yml
-
-编辑 `config/west.yml` 文件，在 `manifest/remotes` 部分添加：
+在 `manifest/remotes` 部分添加：
 
 ```yaml
 remotes:
   - name: zmkfirmware
     url-base: https://github.com/zmkfirmware
-  - name: cornix-shield
-    url-base: https://github.com/hitsmaxft
+  - name: numachang
+    url-base: https://github.com/numachang
   - name: urob
     url-base: https://github.com/urob
 ```
@@ -182,13 +169,15 @@ projects:
     remote: zmkfirmware
     revision: main
     import: app/west.yml
-  - name: zmk-keyboard-cornix
-    remote: cornix-shield
+  - name: cornix-zmk-custom
+    remote: numachang
     revision: main
   - name: zmk-helpers
     remote: urob
     revision: main
 ```
+
+> 想使用上游而非日本分支？请使用 `url-base: https://github.com/hitsmaxft`，项目名为 `zmk-keyboard-cornix`。
 
 ### 2. 更新依赖
 
@@ -198,146 +187,38 @@ west update
 
 ### 3. 配置构建
 
-编辑 `build.yaml` 文件，添加：
+将[构建目标](#构建目标buildyaml)中的目标添加到你的 `build.yaml`。
 
-> [!NOTE]
-> 1. 如果您使用（默认）无适配器的 cornix，请选择 "cornix_left"、"cornix_right" 和 "reset"。
-> 2. 如果您将 cornix 与适配器一起使用，请选择 "cornix_dongle"。"cornix_left_for_dongle"、"cornix_right" 和 "reset"。
-> 3. 添加 "cornix_indicator" 扩展板以启用 RGB led 灯。它消耗更多电量，使用风险自负。
+### 4. 构建并刷写
 
-```yaml
-include:
-  # 使用带适配器的 cornix
-  - board: nice_nano
-    shield: cornix_dongle_adaptor cornix_dongle_eyelash dongle_display
-    snippet: studio-rpc-usb-uart
-    artifact-name: cornix_dongle
+- 无需恢复 SoftDevice（自开发板 v2.3 起）。
+- 如需重新配对，向两侧刷写 `cornix_reset`。
+- 刷写左右 `.uf2` 文件并同时复位两侧。
 
-  - board: cornix_ph_left
-    # shield: cornix_indicator
-    artifact-name: cornix_left_for_dongle
+## 本地构建此项目（不使用 `west.yml` 依赖）
 
-  # 使用不带适配器的 cornix
-  - board: cornix_left
-    # shield: cornix_indicator
-    artifact-name: cornix_left
-
-  - board: cornix_right
-    # shield: cornix_indicator
-    artifact-name: cornix_right
-
-  - board: cornix_right
-    shield: settings_reset
-    artifact-name: reset
-```
-
-### 4. 构建固件
-
-使用您喜欢的方法构建
-
-- 自 2.3 版本以来无需恢复 SD
-- 在 cornix 的两侧刷入 reset.uf2
-- 刷入左、右 uf2 文件
-- 同时重置两侧
-
-### 5. 刷入固件
-
-将生成的 `.uf2` 文件刷入相应的微控制器：
-- 左半部分：`build/left/zephyr/zmk.uf2`
-- 右半部分：`build/right/zephyr/zmk.uf2`
-
-## 自定义适配器用户的适配器扩展板
-
-对于想要创建自己自定义适配器配置的用户，此仓库提供了一个适配器扩展板。Cornix 适配器的完整配置可以使用多个扩展板：
-
-1. **`cornix_dongle_adapter`** - 这是矩阵和蓝牙功能的通用扩展板
-2. **`dongle_display`** - 适配器屏幕的显示模块（或另一个显示项目）
-3. **`cornix_dongle_eyelash`** - 为板子设置显示设备的示例扩展板（如果板子在设备树中已经有 `zephyr,display`，则不需要此显示覆盖扩展板）
-
-`build.yaml` 文件中的配置显示了如何将这些扩展板用于 eyelash 适配器：
-
-```yaml
-include:
-  # 使用带适配器的 cornix
-  - board: nice_nano
-    shield: cornix_dongle_adapter cornix_dongle_eyelash dongle_display
-    snippet: studio-rpc-usb-uart
-    artifact-name: cornix_dongle
-```
-
-要为显示部分创建自定义扩展板：
-1. `dongle_display` 模块是一个包含显示小部件的模块，作为项目依赖项通过 west 或本地包含
-2. 如果您需要为显示硬件创建自定义扩展板，您可以创建一个提供适当显示配置的新扩展板。此处显示 `cornix_dongle_eyelash` 作为示例
-3. 如果您的板子在设备树中已经有 `zephyr,display`，您可以省略 `cornix_dongle_eyelash` 扩展板
-4. 在构建配置中包含您的自定义扩展板
-
-对于自定义适配器屏幕，在 build.yaml 中为您的自定义适配器添加新目标：
-
-```yaml
-- board: nice_nano
-  shield: cornix_dongle_adapter cornix_dongle_eyelash dongle_display
-  snippet: studio-rpc-usb-uart zmk-usb-logging
-  artifact-name: cornix_dongle
-```
-
-要为您的显示创建自定义扩展板：
-1. 使用 `cornix_dongle_adapter` 作为矩阵和蓝牙功能的基础扩展板
-2. 在 `build.yaml` 文件中添加您的自定义扩展板，使用适当的板子和配置
-3. 使用 `cornix_dongle_eyelash` 作为示例并修改显示部分以匹配您的自定义板子
-4. 您可以将 `cornix_dongle_eyelash` 复制到您项目中的 `boards/shield/` 目录，并使用相同的名称或重命名为新扩展板
-
-`west.yml` 文件中的配置保持不变：
-
-```yaml
-remotes:
-  - name: zmkfirmware
-    url-base: https://github.com/zmkfirmware
-  - name: cornix-shield
-    url-base: https://github.com/hitsmaxft
-  - name: urob
-    url-base: https://github.com/urob
-```
-
-```yaml
-projects:
-  - name: zmk
-    remote: zmkfirmware
-    revision: main
-    import: app/west.yml
-  - name: zmk-keyboard-cornix
-    remote: cornix-shield
-    revision: main
-  - name: zmk-helpers
-    remote: urob
-    revision: main
-```
-
-## 本地构建此项目（不使用 west.yaml 依赖）
-
-如果您更喜欢在不将此添加为 west.yaml 依赖的情况下本地构建此项目，您可以使用 ZMK_EXTRA_MODULES cmake 参数。
+如果你更喜欢在不将其添加为 `west.yml` 依赖的情况下本地构建，可以使用 `ZMK_EXTRA_MODULES` cmake 参数。
 
 ### 先决条件
 
-1. 有一个工作的 ZMK 开发环境
-2. 将此仓库克隆到本地目录
+1. 一个可用的 ZMK 开发环境。
+2. 已将此仓库克隆到本地目录。
 
 ### 构建步骤
 
 1. **克隆此仓库**：
    ```bash
-   git clone https://github.com/hitsmaxft/zmk-keyboard-cornix.git
+   git clone https://github.com/numachang/cornix-zmk-custom.git
    ```
 
-2. **使用额外模块配置您的 ZMK 构建**：
-
-   编辑您的 `.west/config` 文件并在 `[build]` 部分下添加 cmake 参数：
+2. **使用额外模块配置你的 ZMK 构建** — 编辑 `.west/config` 并在 `[build]` 部分添加 cmake 参数：
 
    ```ini
    [build]
-   cmake-args = -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DZMK_EXTRA_MODULES=/full/absolute/path/to/zmk-keyboard-cornix
+   cmake-args = -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DZMK_EXTRA_MODULES=/full/absolute/path/to/cornix-zmk-custom
    ```
 
-   将 `/full/absolute/path/to/zmk-keyboard-cornix` 替换为您克隆此仓库的实际绝对路径。
+   将路径替换为你克隆此仓库的实际绝对路径。
 
 3. **构建固件**：
    ```bash
@@ -345,4 +226,24 @@ projects:
    west build -b cornix_right
    ```
 
-此方法允许您使用 Cornix 扩展板而不修改您现有 ZMK 配置的 west.yaml 文件。
+此方法允许你在不修改现有 ZMK 配置的 `west.yml` 的情况下使用 Cornix 模块。
+
+### 使用 Nix 进行本地构建（Linux / macOS）
+
+通过 `Justfile` 提供了基于 Nix 的流程：
+
+```bash
+nix develop          # 提供 zephyr-sdk、west、just、yq、keymap-drawer
+just init            # west init -l config && west update && west zephyr-export
+just list            # 显示从 build.yaml 解析出的构建目标
+just build cornix_left
+just clean
+just draw cornix     # 通过 keymap-drawer 渲染键位图 SVG
+```
+
+Windows 用户应改用 GitHub Actions。
+
+## 关于 RGB
+
+Cornix 扩展板每侧有 2 个 RGB LED，在原厂固件中由 PWM 控制。在 ZMK 中，这些 LED 由 `cornix_indicator` 扩展板驱动，
+用于指示电池和连接状态。完全原生的树外 RGB 模块也在计划中（见 issue #2）。
