@@ -319,6 +319,13 @@
             bindings = <&kp LANG2 &kp SLASH>;
             label = "M17";
         };
+
+        M18: M18 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&kp LANG2 &kp EQUAL>;
+            label = "M18";
+        };
     };
 
     keymap {
@@ -341,10 +348,10 @@
         Mix {
             display-name = "Mix";
             bindings = <
-&none  &M16   &kp KP_N7  &kp KP_N8  &kp KP_N9        &M14                                        &kp HASH     &kp EXCLAMATION  &kp QUESTION  &M4         &M5        &none
-&none  &M17   &kp KP_N4  &kp KP_N5  &kp KP_N6        &M15                                        &M1          &kp LEFT         &kp DOWN      &kp UP      &kp RIGHT  &none
-&none  &M13   &kp KP_N1  &kp KP_N2  &kp KP_N3        &M12      &kp LG(V)  &kp RG(RC(SEMICOLON))  &kp PERCENT  &kp AMPERSAND    &kp AT_SIGN   &kp DOLLAR  &kp SLASH  &none
-&none  &none  &none      &kp EQUAL  &kp KP_NUMBER_0  &mo NAVI                                    &mo NAVI     &kp BACKSLASH    &kp PIPE      &none       &none      &none
+&none  &M16   &kp KP_N7  &kp KP_N8        &kp KP_N9  &M14                                    &kp HASH       &kp EXCLAMATION  &kp QUESTION  &M4         &M5        &none
+&none  &M17   &kp KP_N4  &kp KP_N5        &kp KP_N6  &M15                                    &M1            &kp LEFT         &kp DOWN      &kp UP      &kp RIGHT  &none
+&none  &M13   &kp KP_N1  &kp KP_N2        &kp KP_N3  &M12  &kp LG(V)  &kp RG(RC(SEMICOLON))  &kp PERCENT    &kp AMPERSAND    &kp AT_SIGN   &kp DOLLAR  &kp SLASH  &none
+&none  &none  &none      &kp KP_NUMBER_0  &mo 3      &M18                                    &kp BACKSLASH  &mo 3            &kp PIPE      &none       &none      &none
             >;
 
             sensor-bindings =
@@ -358,7 +365,7 @@
 &none  &kp LC(G)          &kp GRAVE  &kp TILDE         &kp COMMA          &kp DOT                                                             &kp HASH     &kp EXCLAMATION  &kp QUESTION     &M6    &M7    &none
 &none  &kp BACKSLASH      &kp PIPE   &kp LEFT_BRACKET  &kp RIGHT_BRACKET  &mt170_behavior UNDERSCORE MINUS                                    &kp RG(A)    &kp LEFT_BRACE   &kp RIGHT_BRACE  &M9    &M8    &none
 &none  &kp DOUBLE_QUOTES  &kp LA(G)  &kp LA(A)         &kp LA(Y)          &mt170_behavior COLON SEMI        &kp LG(V)  &kp RC(RG(SEMICOLON))  &kp PERCENT  &kp AMPERSAND    &kp AT_SIGN      &M10   &M11   &none
-&none  &none              &none      &none             &none              &mo NAVI                                                            &mo NAVI     &kp RC(S)        &kp RC(K)        &none  &none  &none
+&none  &none              &none      &none             &mo 3              &none                                                               &none        &mo 3            &none            &none  &none  &none
             >;
 
             sensor-bindings =
