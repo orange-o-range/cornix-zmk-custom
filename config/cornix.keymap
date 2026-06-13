@@ -198,6 +198,20 @@
             timeout-ms = <100>;
             require-prior-idle-ms = <150>;
         };
+
+        ctrl+cmd_left {
+            bindings = <&ctrl_cmd>;
+            key-positions = <15 14>;
+            layers = <0>;
+            slow-release;
+        };
+
+        ctrl+cmd_right {
+            bindings = <&ctrl_cmd>;
+            key-positions = <20 21>;
+            slow-release;
+            layers = <0>;
+        };
     };
 
     macros {
@@ -325,6 +339,19 @@
             #binding-cells = <0>;
             bindings = <&kp LANG2 &kp EQUAL>;
             label = "M18";
+        };
+
+        ctrl_cmd: ctrl_cmd {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings =
+                <&macro_press>,
+                <&kp LCTRL &kp LGUI>,
+                <&macro_pause_for_release>,
+                <&macro_release>,
+                <&kp LGUI &kp LCTRL>;
+
+            label = "CTRL_CMD";
         };
     };
 
